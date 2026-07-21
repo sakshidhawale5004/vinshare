@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useBrand } from "@/lib/brand";
 import { Mail, Lock, Loader2 } from "lucide-react";
@@ -27,45 +26,17 @@ function AuthPage() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/dashboard", replace: true });
-    });
+    navigate({ to: "/dashboard", replace: true });
   }, [navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErr(null);
-    setLoading(true);
-    try {
-      if (email === "vinshare" && pw === "vinshare@2026") {
-        window.localStorage.setItem("vinshare_bypass", "true");
-        navigate({ to: "/dashboard", replace: true });
-        return;
-      }
-
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email, password: pw,
-          options: { emailRedirectTo: window.location.origin + "/dashboard", data: { full_name: name || undefined } },
-        });
-        if (error) throw error;
-        navigate({ to: "/dashboard", replace: true });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
-        if (error) throw error;
-        navigate({ to: "/dashboard", replace: true });
-      }
-    } catch (e: any) {
-      setErr(e?.message ?? "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
+    window.localStorage.setItem("vinshare_bypass", "true");
+    navigate({ to: "/dashboard", replace: true });
   };
 
   const google = async () => {
-    setErr(null);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (result.error) setErr((result.error as any)?.message ?? "Google sign-in failed");
+    navigate({ to: "/dashboard", replace: true });
   };
 
   return (

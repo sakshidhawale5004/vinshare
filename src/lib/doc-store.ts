@@ -1,33 +1,35 @@
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/client";
 import { computeTotals, type Invoice, type Proposal } from "./doc-types";
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, query, orderBy, limit, where, addDoc } from "firebase/firestore";
 
 export async function listInvoices() {
-  const { data, error } = await supabase.from("invoices").select("*").order("updated_at", { ascending: false });
-  if (error) throw error;
-  return data || [];
+  const q = query(collection(db, "invoices"), orderBy("updated_at", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
+
 export async function listProposals() {
-  const { data, error } = await supabase.from("proposals").select("*").order("updated_at", { ascending: false });
-  if (error) throw error;
-  return data || [];
+  const q = query(collection(db, "proposals"), orderBy("updated_at", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
+
 export async function getInvoice(id: string) {
-  const { data, error } = await supabase.from("invoices").select("*").eq("id", id).maybeSingle();
-  if (error) throw error;
-  return data;
+  const docSnap = await getDoc(doc(db, "invoices", id));
+  if (!docSnap.exists()) return null;
+  return { ...docSnap.data(), id: docSnap.id };
 }
+
 export async function getProposal(id: string) {
-  const { data, error } = await supabase.from("proposals").select("*").eq("id", id).maybeSingle();
-  if (error) throw error;
-  return data;
+  const docSnap = await getDoc(doc(db, "proposals", id));
+  if (!docSnap.exists()) return null;
+  return { ...docSnap.data(), id: docSnap.id };
 }
 
 export async function saveInvoice(inv: Invoice) {
-  const u = { user: { id: "default-user" } };
   const totals = computeTotals(inv.items);
   const row = {
-    id: inv.id,
-    user_id: u.user.id,
+    user_id: "default-user",
     number: inv.number,
     status: inv.status,
     issue_date: inv.issueDate || null,
@@ -41,18 +43,15 @@ export async function saveInvoice(inv: Invoice) {
     total: totals.total,
     updated_at: new Date().toISOString(),
   };
-  const { data: saved, error } = await supabase.from("invoices").upsert(row).select("*").maybeSingle();
-  if (error) throw error;
-  await snapshotVersion(u.user.id, "invoice", inv.id, inv);
-  return saved as any;
+  await setDoc(doc(db, "invoices", inv.id), row, { merge: true });
+  await snapshotVersion("default-user", "invoice", inv.id, inv);
+  return { ...row, id: inv.id };
 }
 
 export async function saveProposal(pr: Proposal) {
-  const u = { user: { id: "default-user" } };
   const totals = computeTotals(pr.items);
   const row = {
-    id: pr.id,
-    user_id: u.user.id,
+    user_id: "default-user",
     number: pr.number,
     title: pr.title,
     issue_date: pr.issueDate || null,
@@ -67,47 +66,47 @@ export async function saveProposal(pr: Proposal) {
     total: totals.total,
     updated_at: new Date().toISOString(),
   };
-  const { data: saved, error } = await supabase.from("proposals").upsert(row).select("*").maybeSingle();
-  if (error) throw error;
-  await snapshotVersion(u.user.id, "proposal", pr.id, pr);
-  return saved as any;
+  await setDoc(doc(db, "proposals", pr.id), row, { merge: true });
+  await snapshotVersion("default-user", "proposal", pr.id, pr);
+  return { ...row, id: pr.id };
 }
 
 async function snapshotVersion(userId: string, docType: "invoice" | "proposal", docId: string, snapshot: any) {
-  await supabase.from("document_versions").insert({
+  await addDoc(collection(db, "document_versions"), {
     user_id: userId,
     doc_type: docType,
     doc_id: docId,
-    snapshot: snapshot as any,
+    snapshot: snapshot,
     label: new Date().toLocaleString(),
+    created_at: new Date().toISOString(),
   });
 }
 
 export async function listVersions(docType: "invoice" | "proposal", docId: string) {
-  const { data, error } = await supabase
-    .from("document_versions")
-    .select("id, created_at, label, snapshot")
-    .eq("doc_type", docType)
-    .eq("doc_id", docId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  if (error) throw error;
-  return data || [];
+  const q = query(
+    collection(db, "document_versions"), 
+    where("doc_type", "==", docType), 
+    where("doc_id", "==", docId),
+    orderBy("created_at", "desc"),
+    limit(50)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function getShareToken(docType: "invoice" | "proposal", docId: string): Promise<string | null> {
   const table = docType === "invoice" ? "invoices" : "proposals";
-  const { data } = await supabase.from(table).select("share_token").eq("id", docId).maybeSingle();
-  return (data?.share_token as string | undefined) ?? null;
+  const docSnap = await getDoc(doc(db, table, docId));
+  if (!docSnap.exists()) return null;
+  return (docSnap.data()?.share_token as string | undefined) ?? null;
 }
 
 export async function deleteInvoice(id: string) {
-  const { error } = await supabase.from("invoices").delete().eq("id", id);
-  if (error) throw error;
+  await deleteDoc(doc(db, "invoices", id));
 }
+
 export async function deleteProposal(id: string) {
-  const { error } = await supabase.from("proposals").delete().eq("id", id);
-  if (error) throw error;
+  await deleteDoc(doc(db, "proposals", id));
 }
 
 export function rowToInvoice(r: any): Invoice {
@@ -125,6 +124,7 @@ export function rowToInvoice(r: any): Invoice {
     terms: r.terms || "",
   };
 }
+
 export function rowToProposal(r: any): Proposal {
   return {
     id: r.id,

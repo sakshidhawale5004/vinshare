@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Nav } from "@/components/nav";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, doc, setDoc, deleteDoc, query, orderBy } from "firebase/firestore";
 import { useBrand } from "@/lib/brand";
 import { useState } from "react";
 import { Plus, Search, Trash2, Save, Users, Mail, Phone, MapPin } from "lucide-react";
@@ -18,9 +19,9 @@ type Client = {
 };
 
 async function listClients() {
-  const { data, error } = await supabase.from("clients").select("*").order("name");
-  if (error) throw error;
-  return (data || []) as Client[];
+  const q = query(collection(db, "clients"), orderBy("name"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ ...d.data(), id: d.id })) as Client[];
 }
 
 function ClientsPage() {
@@ -34,11 +35,9 @@ function ClientsPage() {
 
   const save = async () => {
     if (!editing?.name) return;
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
+    const id = editing.id || crypto.randomUUID();
     const row = {
-      id: editing.id || undefined,
-      user_id: u.user.id,
+      user_id: "default-user",
       name: editing.name,
       email: editing.email || null,
       phone: editing.phone || null,
@@ -46,13 +45,13 @@ function ClientsPage() {
       gstin: editing.gstin || null,
       notes: editing.notes || null,
     };
-    await supabase.from("clients").upsert(row);
+    await setDoc(doc(db, "clients", id), row, { merge: true });
     qc.invalidateQueries({ queryKey: ["clients"] });
     setEditing(null);
   };
   const remove = async (id: string) => {
     if (!confirm("Delete this client?")) return;
-    await supabase.from("clients").delete().eq("id", id);
+    await deleteDoc(doc(db, "clients", id));
     qc.invalidateQueries({ queryKey: ["clients"] });
   };
 

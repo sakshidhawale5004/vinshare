@@ -1,44 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const tokenInput = z.object({ token: z.string().uuid() });
 
 export const getSharedInvoice = createServerFn({ method: "GET" })
   .inputValidator((d) => tokenInput.parse(d))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: doc, error } = await supabaseAdmin
-      .from("invoices")
-      .select("*")
-      .eq("share_token", data.token)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!doc) return null;
-    const { data: brand } = await supabaseAdmin
-      .from("brand_settings")
-      .select("settings")
-      .eq("user_id", doc.user_id)
-      .maybeSingle();
+    const { firebaseAdminDb } = await import("@/integrations/firebase/client.server");
+    const snap = await firebaseAdminDb.collection("invoices").where("share_token", "==", data.token).limit(1).get();
+    if (snap.empty) return null;
+    const doc = { ...snap.docs[0].data(), id: snap.docs[0].id };
+    
+    const brandSnap = await firebaseAdminDb.collection("brand_settings").doc(doc.user_id as string).get();
+    const brand = brandSnap.exists ? brandSnap.data() : null;
     return { doc, brand: (brand?.settings as any) ?? null };
   });
 
 export const getSharedProposal = createServerFn({ method: "GET" })
   .inputValidator((d) => tokenInput.parse(d))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: doc, error } = await supabaseAdmin
-      .from("proposals")
-      .select("*")
-      .eq("share_token", data.token)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!doc) return null;
-    const { data: brand } = await supabaseAdmin
-      .from("brand_settings")
-      .select("settings")
-      .eq("user_id", doc.user_id)
-      .maybeSingle();
+    const { firebaseAdminDb } = await import("@/integrations/firebase/client.server");
+    const snap = await firebaseAdminDb.collection("proposals").where("share_token", "==", data.token).limit(1).get();
+    if (snap.empty) return null;
+    const doc = { ...snap.docs[0].data(), id: snap.docs[0].id };
+    
+    const brandSnap = await firebaseAdminDb.collection("brand_settings").doc(doc.user_id as string).get();
+    const brand = brandSnap.exists ? brandSnap.data() : null;
     return { doc, brand: (brand?.settings as any) ?? null };
   });
 
@@ -67,17 +54,14 @@ const emailInput = z.object({
 });
 
 export const sendDocumentEmail = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) => emailInput.parse(d))
-  .handler(async ({ data, context }) => {
-    // Verify ownership via RLS-scoped client
+  .handler(async ({ data }) => {
+    const { firebaseAdminDb } = await import("@/integrations/firebase/client.server");
     const table = data.docType === "invoice" ? "invoices" : "proposals";
-    const { data: owned, error } = await context.supabase
-      .from(table)
-      .select("id, number, client_name")
-      .eq("id", data.docId)
-      .maybeSingle();
-    if (error || !owned) throw new Error("Document not found");
+    
+    const docSnap = await firebaseAdminDb.collection(table).doc(data.docId).get();
+    if (!docSnap.exists) throw new Error("Document not found");
+    const owned = { ...docSnap.data(), id: docSnap.id };
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
