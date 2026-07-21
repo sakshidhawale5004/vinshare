@@ -38,6 +38,7 @@ function AuthPage() {
     setLoading(true);
     try {
       if (email === "vinshare" && pw === "vinshare@2026") {
+        window.localStorage.setItem("vinshare_bypass", "true");
         navigate({ to: "/dashboard", replace: true });
         return;
       }

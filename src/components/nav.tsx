@@ -14,17 +14,27 @@ export function Nav() {
   const qc = useQueryClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setEmail(s?.user?.email ?? null));
+    if (typeof window !== "undefined" && window.localStorage.getItem("vinshare_bypass") === "true") {
+      setEmail("vinshare");
+    } else {
+      supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    }
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      if (window.localStorage.getItem("vinshare_bypass") !== "true") {
+        setEmail(s?.user?.email ?? null);
+      }
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
+    window.localStorage.removeItem("vinshare_bypass");
+    setEmail(null);
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
     router.invalidate();
-    navigate({ to: "/auth", replace: true });
+    navigate({ to: "/", replace: true });
   };
 
   return (
@@ -72,13 +82,24 @@ export function Nav() {
           )}
         </div>
       ) : (
-        <Link
-          to="/auth"
-          className="text-white px-4 md:px-5 py-2 rounded-xl text-sm font-semibold shadow-lg hover:scale-[1.03] active:scale-95 transition-transform"
-          style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})`, boxShadow: `0 8px 24px -8px ${brand.primary}` }}
+        <form
+          className="flex items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.target as HTMLFormElement;
+            const u = (form.elements.namedItem("username") as HTMLInputElement).value;
+            const p = (form.elements.namedItem("password") as HTMLInputElement).value;
+            if (u === "vinshare" && p === "vinshare@2026") {
+              window.localStorage.setItem("vinshare_bypass", "true");
+              setEmail("vinshare");
+              navigate({ to: "/dashboard", replace: true });
+            }
+          }}
         >
-          Sign in →
-        </Link>
+          <input name="username" defaultValue="vinshare" className="w-24 md:w-32 bg-card border border-border rounded-lg px-2 md:px-3 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Username" />
+          <input name="password" type="password" defaultValue="vinshare@2026" className="w-24 md:w-32 bg-card border border-border rounded-lg px-2 md:px-3 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Password" />
+          <button type="submit" className="text-white px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-semibold shadow-md hover:scale-[1.03] active:scale-95 transition-transform" style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}>Login</button>
+        </form>
       )}
     </nav>
   );
