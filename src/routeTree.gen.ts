@@ -19,8 +19,6 @@ import { Route as AuthenticatedInvoiceRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
-import { Route as ShareProposalTokenRouteImport } from './routes/share/proposal.$token'
-import { Route as ShareInvoiceTokenRouteImport } from './routes/share/invoice.$token'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -71,16 +69,6 @@ const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ShareProposalTokenRoute = ShareProposalTokenRouteImport.update({
-  id: '/share/proposal/$token',
-  path: '/share/proposal/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ShareInvoiceTokenRoute = ShareInvoiceTokenRouteImport.update({
-  id: '/share/invoice/$token',
-  path: '/share/invoice/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -92,8 +80,6 @@ export interface FileRoutesByFullPath {
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
-  '/share/invoice/$token': typeof ShareInvoiceTokenRoute
-  '/share/proposal/$token': typeof ShareProposalTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -105,8 +91,6 @@ export interface FileRoutesByTo {
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
-  '/share/invoice/$token': typeof ShareInvoiceTokenRoute
-  '/share/proposal/$token': typeof ShareProposalTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -120,8 +104,6 @@ export interface FileRoutesById {
   '/_authenticated/proposal': typeof AuthenticatedProposalRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/chat': typeof ApiChatRoute
-  '/share/invoice/$token': typeof ShareInvoiceTokenRoute
-  '/share/proposal/$token': typeof ShareProposalTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -135,8 +117,6 @@ export interface FileRouteTypes {
     | '/proposal'
     | '/settings'
     | '/api/chat'
-    | '/share/invoice/$token'
-    | '/share/proposal/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -148,8 +128,6 @@ export interface FileRouteTypes {
     | '/proposal'
     | '/settings'
     | '/api/chat'
-    | '/share/invoice/$token'
-    | '/share/proposal/$token'
   id:
     | '__root__'
     | '/'
@@ -162,8 +140,6 @@ export interface FileRouteTypes {
     | '/_authenticated/proposal'
     | '/_authenticated/settings'
     | '/api/chat'
-    | '/share/invoice/$token'
-    | '/share/proposal/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,8 +147,6 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
-  ShareInvoiceTokenRoute: typeof ShareInvoiceTokenRoute
-  ShareProposalTokenRoute: typeof ShareProposalTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -247,20 +221,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedClientsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/share/proposal/$token': {
-      id: '/share/proposal/$token'
-      path: '/share/proposal/$token'
-      fullPath: '/share/proposal/$token'
-      preLoaderRoute: typeof ShareProposalTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/share/invoice/$token': {
-      id: '/share/invoice/$token'
-      path: '/share/invoice/$token'
-      fullPath: '/share/invoice/$token'
-      preLoaderRoute: typeof ShareInvoiceTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -290,8 +250,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
-  ShareInvoiceTokenRoute: ShareInvoiceTokenRoute,
-  ShareProposalTokenRoute: ShareProposalTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

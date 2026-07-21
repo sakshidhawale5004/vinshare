@@ -1,32 +1,38 @@
-import { db } from "@/integrations/firebase/client";
-import { doc, getDoc, setDoc, deleteDoc, collection, addDoc } from "firebase/firestore";
 import type { UIMessage } from "ai";
 
 export type VinDocType = "invoice" | "proposal" | "global";
 
+function getStorage<T>(key: string): T {
+  if (typeof window === "undefined") return {} as T;
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : {};
+  } catch {
+    return {} as T;
+  }
+}
+
+function setStorage<T>(key: string, data: T) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(key, JSON.stringify(data));
+  }
+}
+
 export async function loadVinChat(docType: VinDocType, docId: string): Promise<UIMessage[]> {
-  const docRef = doc(db, "vin_chats", `${docType}_${docId}`);
-  const docSnap = await getDoc(docRef);
-  if (!docSnap.exists()) return [];
-  const data = docSnap.data();
-  const arr = data.messages;
-  return Array.isArray(arr) ? (arr as UIMessage[]) : [];
+  const chats = getStorage<Record<string, UIMessage[]>>("vinshare_chats");
+  return chats[`${docType}_${docId}`] || [];
 }
 
 export async function saveVinChat(docType: VinDocType, docId: string, messages: UIMessage[]) {
-  const docRef = doc(db, "vin_chats", `${docType}_${docId}`);
-  await setDoc(docRef, {
-    user_id: "default-user",
-    doc_type: docType,
-    doc_id: docId,
-    messages: messages,
-    updated_at: new Date().toISOString(),
-  }, { merge: true });
+  const chats = getStorage<Record<string, UIMessage[]>>("vinshare_chats");
+  chats[`${docType}_${docId}`] = messages;
+  setStorage("vinshare_chats", chats);
 }
 
 export async function clearVinChat(docType: VinDocType, docId: string) {
-  const docRef = doc(db, "vin_chats", `${docType}_${docId}`);
-  await deleteDoc(docRef);
+  const chats = getStorage<Record<string, UIMessage[]>>("vinshare_chats");
+  delete chats[`${docType}_${docId}`];
+  setStorage("vinshare_chats", chats);
 }
 
 /** Snapshot the current doc as a version with a "Vin insert" label. */
@@ -36,12 +42,22 @@ export async function snapshotVinInsert(
   snapshot: unknown,
   targetLabel: string,
 ) {
-  await addDoc(collection(db, "document_versions"), {
-    user_id: "default-user",
-    doc_type: docType,
-    doc_id: docId,
-    snapshot: snapshot,
-    label: `Vin insert → ${targetLabel} · ${new Date().toLocaleString()}`,
-    created_at: new Date().toISOString(),
-  });
+  if (typeof window === "undefined") return;
+  
+  try {
+    const data = localStorage.getItem("vinshare_versions");
+    const versions = data ? JSON.parse(data) : [];
+    versions.push({
+      id: crypto.randomUUID(),
+      user_id: "default-user",
+      doc_type: docType,
+      doc_id: docId,
+      snapshot: snapshot,
+      label: `Vin insert → ${targetLabel} · ${new Date().toLocaleString()}`,
+      created_at: new Date().toISOString(),
+    });
+    localStorage.setItem("vinshare_versions", JSON.stringify(versions));
+  } catch (e) {
+    console.error(e);
+  }
 }

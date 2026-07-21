@@ -1,6 +1,4 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, createElement } from "react";
-import { db } from "@/integrations/firebase/client";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export type BrandSettings = {
   companyName: string;
@@ -65,28 +63,8 @@ export function BrandProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
-  // Sync with cloud
-  useEffect(() => {
-    const load = async () => {
-      const docRef = doc(db, "brand_settings", "default-user");
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data?.settings) {
-          setBrand({ ...defaultBrand, ...(data.settings as Partial<BrandSettings>) });
-        }
-      }
-    };
-    load();
-  }, []);
-
   const persist = (next: BrandSettings) => {
     try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      const docRef = doc(db, "brand_settings", "default-user");
-      await setDoc(docRef, { user_id: "default-user", settings: next as any, updated_at: new Date().toISOString() }, { merge: true }).catch(console.error);
-    }, 600);
   };
 
   const update = (patch: Partial<BrandSettings>) => {

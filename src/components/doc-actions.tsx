@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useServerFn } from "@tanstack/react-start";
-import { Share2, Mail, History, Save, Copy, Check, X, RotateCcw, Loader2, GitCompare, ArrowLeft } from "lucide-react";
+import { History, Save, X, RotateCcw, Loader2, GitCompare, ArrowLeft } from "lucide-react";
 import type { Invoice, Proposal } from "@/lib/doc-types";
 import { useBrand } from "@/lib/brand";
-import { saveInvoice, saveProposal, listVersions, getShareToken } from "@/lib/doc-store";
-import { sendDocumentEmail } from "@/lib/share.functions";
+import { saveInvoice, saveProposal, listVersions } from "@/lib/doc-store";
 
 type Props =
   | { docType: "invoice"; doc: Invoice; onRestore: (snapshot: Invoice) => void }
@@ -13,46 +11,19 @@ type Props =
 
 export function DocActions(props: Props) {
   const { brand } = useBrand();
-  const [busy, setBusy] = useState<null | "save" | "share" | "email">(null);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [openDialog, setOpenDialog] = useState<null | "share" | "email" | "versions">(null);
-  const sendEmail = useServerFn(sendDocumentEmail);
+  const [busy, setBusy] = useState<null | "save">(null);
+  const [openDialog, setOpenDialog] = useState<null | "versions">(null);
 
   const saveNow = async () => {
     setBusy("save");
     try {
       if (props.docType === "invoice") await saveInvoice(props.doc);
       else await saveProposal(props.doc);
-      const t = await getShareToken(props.docType, props.doc.id);
-      if (t) setShareUrl(buildShareUrl(props.docType, t));
     } catch (e: any) {
       alert(e.message || "Save failed");
     } finally {
       setBusy(null);
     }
-  };
-
-  const openShare = async () => {
-    setBusy("share");
-    try {
-      // Ensure saved so token exists
-      if (props.docType === "invoice") await saveInvoice(props.doc);
-      else await saveProposal(props.doc);
-      const t = await getShareToken(props.docType, props.doc.id);
-      if (!t) throw new Error("No share link available");
-      setShareUrl(buildShareUrl(props.docType, t));
-      setOpenDialog("share");
-    } catch (e: any) {
-      alert(e.message || "Could not create share link");
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const openEmail = async () => {
-    await openShare();
-    setOpenDialog("email");
   };
 
   const btn =
@@ -63,60 +34,11 @@ export function DocActions(props: Props) {
       <button onClick={saveNow} disabled={busy === "save"} className={btn}>
         {busy === "save" ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Save
       </button>
-      <button onClick={openShare} disabled={busy === "share"} className={btn}>
-        {busy === "share" ? <Loader2 className="size-4 animate-spin" /> : <Share2 className="size-4" />} Share link
-      </button>
-      <button onClick={openEmail} className={btn}>
-        <Mail className="size-4" /> Email
-      </button>
       <button onClick={() => setOpenDialog("versions")} className={btn}>
         <History className="size-4" /> Versions
       </button>
 
       <AnimatePresence>
-        {openDialog === "share" && shareUrl && (
-          <Dialog title="Shareable preview link" onClose={() => setOpenDialog(null)}>
-            <p className="text-sm text-muted-foreground mb-3">
-              Anyone with this link can view a read-only preview — no sign-in, no download required.
-            </p>
-            <div className="flex gap-2 items-center">
-              <input
-                readOnly
-                value={shareUrl}
-                onFocus={(e) => e.currentTarget.select()}
-                className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono"
-              />
-              <button
-                onClick={async () => {
-                  await navigator.clipboard.writeText(shareUrl);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
-                className="text-white px-3 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5"
-                style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}
-              >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />} {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
-            <a href={shareUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm underline" style={{ color: brand.primary }}>
-              Open preview in new tab →
-            </a>
-          </Dialog>
-        )}
-
-        {openDialog === "email" && shareUrl && (
-          <EmailDialog
-            defaultTo={(props.doc as any).clientEmail || ""}
-            defaultSubject={`${props.docType === "invoice" ? "Invoice" : "Proposal"} ${props.doc.number} from ${brand.companyName}`}
-            shareUrl={shareUrl}
-            onClose={() => setOpenDialog(null)}
-            onSend={async ({ to, cc, bcc, subject, message }) => {
-              await sendEmail({ data: { docType: props.docType, docId: props.doc.id, to, cc, bcc, subject, message, shareUrl } });
-            }}
-          />
-        )}
-
-
         {openDialog === "versions" && (
           <VersionsDialog
             docType={props.docType}
@@ -131,11 +53,6 @@ export function DocActions(props: Props) {
       </AnimatePresence>
     </>
   );
-}
-
-function buildShareUrl(docType: "invoice" | "proposal", token: string) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return `${origin}/share/${docType}/${token}`;
 }
 
 function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -157,68 +74,6 @@ function Dialog({ title, onClose, children }: { title: string; onClose: () => vo
         {children}
       </motion.div>
     </motion.div>
-  );
-}
-
-function EmailDialog({
-  defaultTo, defaultSubject, shareUrl, onSend, onClose,
-}: { defaultTo: string; defaultSubject: string; shareUrl: string; onSend: (v: { to: string; cc: string; bcc: string; subject: string; message: string }) => Promise<void>; onClose: () => void }) {
-  const { brand } = useBrand();
-  const [to, setTo] = useState(defaultTo);
-  const [cc, setCc] = useState("");
-  const [bcc, setBcc] = useState("");
-  const [showCcBcc, setShowCcBcc] = useState(false);
-  const [subject, setSubject] = useState(defaultSubject);
-  const [message, setMessage] = useState(`Hi,\n\nPlease find the document at the link below. Let me know if you have any questions.\n\nThanks,\n${brand.companyName}`);
-  const [sending, setSending] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
-
-  return (
-    <Dialog title="Send by email" onClose={onClose}>
-      <div className="space-y-3 text-sm">
-        <p className="text-xs text-muted-foreground">
-          The email includes your branded preview link. Attachments aren't supported — recipients open the document via the link (no download needed).
-        </p>
-        <Row label="To">
-          <div className="flex gap-2">
-            <input value={to} onChange={(e) => setTo(e.target.value)} className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm" />
-            {!showCcBcc && (
-              <button type="button" onClick={() => setShowCcBcc(true)} className="text-xs px-2.5 py-2 rounded-lg border border-border hover:bg-muted whitespace-nowrap">
-                + Cc / Bcc
-              </button>
-            )}
-          </div>
-        </Row>
-        {showCcBcc && (
-          <>
-            <Row label="Cc"><input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="comma-separated emails" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm" /></Row>
-            <Row label="Bcc"><input value={bcc} onChange={(e) => setBcc(e.target.value)} placeholder="comma-separated emails" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm" /></Row>
-          </>
-        )}
-        <Row label="Subject"><input value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm" /></Row>
-        <Row label="Message"><textarea rows={5} value={message} onChange={(e) => setMessage(e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono resize-y" /></Row>
-        <div className="text-[11px] text-muted-foreground font-mono truncate">Link: {shareUrl}</div>
-        {err && <div className="text-xs text-destructive bg-destructive/10 rounded-lg p-2.5 whitespace-pre-wrap">{err}</div>}
-        {done && <div className="text-xs text-emerald-700 bg-emerald-50 rounded-lg p-2.5">Email sent ✓</div>}
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-border text-sm">Cancel</button>
-          <button
-            disabled={sending || done}
-            onClick={async () => {
-              setErr(null); setSending(true);
-              try { await onSend({ to, cc, bcc, subject, message }); setDone(true); setTimeout(onClose, 1200); }
-              catch (e: any) { setErr(e?.message || "Send failed"); }
-              finally { setSending(false); }
-            }}
-            className="text-white px-4 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-2"
-            style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}
-          >
-            {sending ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />} Send email
-          </button>
-        </div>
-      </div>
-    </Dialog>
   );
 }
 

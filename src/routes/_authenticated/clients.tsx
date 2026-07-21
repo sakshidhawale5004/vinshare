@@ -1,13 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Nav } from "@/components/nav";
-import { db } from "@/integrations/firebase/client";
-import { collection, getDocs, doc, setDoc, deleteDoc, query, orderBy } from "firebase/firestore";
 import { useBrand } from "@/lib/brand";
 import { useState } from "react";
 import { Plus, Search, Trash2, Save, Users, Mail, Phone, MapPin } from "lucide-react";
 import { Field, Input, Textarea } from "@/lib/form-inputs";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { Nav } from "@/components/nav";
 
 export const Route = createFileRoute("/_authenticated/clients")({
   head: () => ({ meta: [{ title: "Clients — Vinshare" }] }),
@@ -18,10 +16,25 @@ type Client = {
   id: string; user_id: string; name: string; email: string | null; phone: string | null; address: string | null; gstin: string | null; notes: string | null;
 };
 
+function getStorage<T>(key: string): T[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setStorage<T>(key: string, data: T[]) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(key, JSON.stringify(data));
+  }
+}
+
 async function listClients() {
-  const q = query(collection(db, "clients"), orderBy("name"));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ ...d.data(), id: d.id })) as Client[];
+  const clients = getStorage<Client>("vinshare_clients");
+  return clients.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function ClientsPage() {
@@ -36,7 +49,8 @@ function ClientsPage() {
   const save = async () => {
     if (!editing?.name) return;
     const id = editing.id || crypto.randomUUID();
-    const row = {
+    const row: Client = {
+      id: id,
       user_id: "default-user",
       name: editing.name,
       email: editing.email || null,
@@ -45,13 +59,20 @@ function ClientsPage() {
       gstin: editing.gstin || null,
       notes: editing.notes || null,
     };
-    await setDoc(doc(db, "clients", id), row, { merge: true });
+    
+    const existingClients = getStorage<Client>("vinshare_clients");
+    const index = existingClients.findIndex(c => c.id === id);
+    if (index >= 0) existingClients[index] = row;
+    else existingClients.push(row);
+    setStorage("vinshare_clients", existingClients);
+    
     qc.invalidateQueries({ queryKey: ["clients"] });
     setEditing(null);
   };
   const remove = async (id: string) => {
     if (!confirm("Delete this client?")) return;
-    await deleteDoc(doc(db, "clients", id));
+    const existingClients = getStorage<Client>("vinshare_clients");
+    setStorage("vinshare_clients", existingClients.filter(c => c.id !== id));
     qc.invalidateQueries({ queryKey: ["clients"] });
   };
 
