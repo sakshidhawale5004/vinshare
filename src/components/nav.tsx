@@ -1,45 +1,16 @@
-import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useBrand } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { LogOut, User } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { User } from "lucide-react";
 
 export function Nav() {
   const { brand } = useBrand();
-  const [email, setEmail] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
-  const router = useRouter();
-  const qc = useQueryClient();
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.localStorage.getItem("vinshare_bypass") === "true") {
-      setEmail("vinshare");
-    } else {
-      supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
-    }
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (window.localStorage.getItem("vinshare_bypass") !== "true") {
-        setEmail(s?.user?.email ?? null);
-      }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  const signOut = async () => {
-    window.localStorage.removeItem("vinshare_bypass");
-    setEmail(null);
-    await qc.cancelQueries();
-    qc.clear();
-    await supabase.auth.signOut();
-    router.invalidate();
-    navigate({ to: "/", replace: true });
-  };
+  const email = "vinshare";
 
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between px-4 md:px-8 py-3 bg-background/70 backdrop-blur-xl border-b border-border/60">
-      <Link to={email ? "/dashboard" : "/"} className="flex items-center gap-2.5 group">
+      <Link to="/dashboard" className="flex items-center gap-2.5 group">
         <div
           className="size-9 rounded-xl grid place-items-center shadow-lg transition-transform group-hover:scale-105"
           style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}
@@ -52,55 +23,28 @@ export function Nav() {
         </div>
       </Link>
       <div className="hidden md:flex items-center gap-1 text-sm font-medium bg-muted/50 rounded-full px-1.5 py-1.5 border border-border/60">
-        {email ? (
-          <>
-            <Link to="/dashboard" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Dashboard</Link>
-            <Link to="/history" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>History</Link>
-            <Link to="/clients" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Clients</Link>
-            <Link to="/invoice" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Invoice</Link>
-            <Link to="/proposal" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Proposal</Link>
-            <Link to="/settings" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Brand</Link>
-          </>
-        ) : (
-          <Link to="/" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }} activeOptions={{ exact: true }}>Home</Link>
+        <Link to="/" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }} activeOptions={{ exact: true }}>Home</Link>
+        <Link to="/dashboard" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Dashboard</Link>
+        <Link to="/history" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>History</Link>
+        <Link to="/clients" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Clients</Link>
+        <Link to="/invoice" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Invoice</Link>
+        <Link to="/proposal" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Proposal</Link>
+        <Link to="/settings" className="px-4 py-1.5 rounded-full hover:bg-background transition-colors" activeProps={{ className: "px-4 py-1.5 rounded-full bg-background shadow-sm" }}>Brand</Link>
+      </div>
+      <div className="relative">
+        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 bg-card border border-border rounded-full pl-2 pr-3 py-1.5 hover:bg-muted transition-colors">
+          <div className="size-7 rounded-full grid place-items-center text-white text-xs font-bold" style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}>
+            {email.charAt(0).toUpperCase()}
+          </div>
+          <span className="text-sm font-medium hidden sm:inline max-w-[140px] truncate">{email}</span>
+        </button>
+        {open && (
+          <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-xl p-1.5" onMouseLeave={() => setOpen(false)}>
+            <div className="px-3 py-2 text-xs text-muted-foreground truncate">{email}</div>
+            <Link to="/settings" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-muted"><User className="size-4" /> Brand settings</Link>
+          </div>
         )}
       </div>
-      {email ? (
-        <div className="relative">
-          <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 bg-card border border-border rounded-full pl-2 pr-3 py-1.5 hover:bg-muted transition-colors">
-            <div className="size-7 rounded-full grid place-items-center text-white text-xs font-bold" style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}>
-              {email.charAt(0).toUpperCase()}
-            </div>
-            <span className="text-sm font-medium hidden sm:inline max-w-[140px] truncate">{email}</span>
-          </button>
-          {open && (
-            <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-xl p-1.5" onMouseLeave={() => setOpen(false)}>
-              <div className="px-3 py-2 text-xs text-muted-foreground truncate">{email}</div>
-              <Link to="/settings" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-muted"><User className="size-4" /> Brand settings</Link>
-              <button onClick={signOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10"><LogOut className="size-4" /> Sign out</button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <form
-          className="flex items-center gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const form = e.target as HTMLFormElement;
-            const u = (form.elements.namedItem("username") as HTMLInputElement).value;
-            const p = (form.elements.namedItem("password") as HTMLInputElement).value;
-            if (u === "vinshare" && p === "vinshare@2026") {
-              window.localStorage.setItem("vinshare_bypass", "true");
-              setEmail("vinshare");
-              navigate({ to: "/dashboard", replace: true });
-            }
-          }}
-        >
-          <input name="username" defaultValue="vinshare" className="w-24 md:w-32 bg-card border border-border rounded-lg px-2 md:px-3 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Username" />
-          <input name="password" type="password" defaultValue="vinshare@2026" className="w-24 md:w-32 bg-card border border-border rounded-lg px-2 md:px-3 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Password" />
-          <button type="submit" className="text-white px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-semibold shadow-md hover:scale-[1.03] active:scale-95 transition-transform" style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}>Login</button>
-        </form>
-      )}
     </nav>
   );
 }

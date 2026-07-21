@@ -23,8 +23,7 @@ export async function getProposal(id: string) {
 }
 
 export async function saveInvoice(inv: Invoice) {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) throw new Error("Not signed in");
+  const u = { user: { id: "default-user" } };
   const totals = computeTotals(inv.items);
   const row = {
     id: inv.id,
@@ -49,8 +48,7 @@ export async function saveInvoice(inv: Invoice) {
 }
 
 export async function saveProposal(pr: Proposal) {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) throw new Error("Not signed in");
+  const u = { user: { id: "default-user" } };
   const totals = computeTotals(pr.items);
   const row = {
     id: pr.id,
