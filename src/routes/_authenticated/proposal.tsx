@@ -8,7 +8,7 @@ import { downloadProposalPDF } from "@/lib/pdf";
 import { Input, Textarea } from "./invoice";
 import { DocActions } from "@/components/doc-actions";
 import { useVinBind } from "@/lib/vin-context";
-import { Plus, Trash2, Download, FileText, GripVertical } from "lucide-react";
+import { Plus, Trash2, Download, FileText, GripVertical, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/proposal")({
   component: ProposalPage,
@@ -115,6 +115,10 @@ function ProposalPage() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <DocActions docType="proposal" doc={pr} onRestore={restore} />
+            <a href={`mailto:${pr.clientEmail}?subject=Proposal%20${pr.number}&body=Hi%20${encodeURIComponent(pr.clientName)},%0D%0A%0D%0APlease%20find%20attached%20our%20proposal%20for%20${encodeURIComponent(pr.title)}.%0D%0A%0D%0AThanks,%0D%0A${encodeURIComponent(brand.companyName)}`}
+              className="inline-flex items-center gap-2 bg-card border border-border px-4 py-2.5 rounded-xl font-semibold hover:bg-muted transition-colors text-sm">
+              <Mail className="size-4" /> Email
+            </a>
             <button onClick={() => downloadProposalPDF(pr, brand)}
               className="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg hover:scale-[1.03] transition-transform"
               style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}>

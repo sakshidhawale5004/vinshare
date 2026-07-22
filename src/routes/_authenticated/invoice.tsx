@@ -7,7 +7,7 @@ import { computeTotals, fmt, uid, type Invoice, type LineItem } from "@/lib/doc-
 import { downloadInvoicePDF } from "@/lib/pdf";
 import { DocActions } from "@/components/doc-actions";
 import { useVinBind } from "@/lib/vin-context";
-import { Plus, Trash2, Download, FileText } from "lucide-react";
+import { Plus, Trash2, Download, FileText, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/invoice")({
   component: InvoicePage,
@@ -99,6 +99,10 @@ function InvoicePage() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <DocActions docType="invoice" doc={inv} onRestore={restore} />
+            <a href={`mailto:${inv.clientEmail}?subject=Invoice%20${inv.number}&body=Hi%20${encodeURIComponent(inv.clientName)},%0D%0A%0D%0APlease%20find%20attached%20invoice%20${inv.number}.%0D%0A%0D%0AThanks,%0D%0A${encodeURIComponent(brand.companyName)}`}
+              className="inline-flex items-center gap-2 bg-card border border-border px-4 py-2.5 rounded-xl font-semibold hover:bg-muted transition-colors text-sm">
+              <Mail className="size-4" /> Email
+            </a>
             <button onClick={() => downloadInvoicePDF(inv, brand)}
               className="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg hover:scale-[1.03] transition-transform"
               style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}>
