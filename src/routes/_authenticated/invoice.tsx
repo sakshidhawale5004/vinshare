@@ -1,15 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Nav } from "@/components/nav";
 import { useBrand } from "@/lib/brand";
 import { computeTotals, fmt, uid, type Invoice, type LineItem } from "@/lib/doc-types";
 import { downloadInvoicePDF } from "@/lib/pdf";
 import { DocActions } from "@/components/doc-actions";
+import { getInvoice } from "@/lib/doc-store";
 import { useVinBind } from "@/lib/vin-context";
 import { Plus, Trash2, Download, FileText, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/invoice")({
+  validateSearch: (s: Record<string, unknown>) => ({ id: typeof s.id === "string" ? s.id : undefined }),
   component: InvoicePage,
 });
 
@@ -22,7 +24,8 @@ function newItem(): LineItem {
 
 function InvoicePage() {
   const { brand } = useBrand();
-  const [inv, setInv] = useState<Invoice>({
+  const { id } = Route.useSearch();
+  const [inv, setInv] = useState<Invoice>(() => ({
     id: uid(),
     number: `${brand.invoicePrefix}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`,
     issueDate: today(),
@@ -37,7 +40,15 @@ function InvoicePage() {
     notes: brand.defaultNotes,
     terms: brand.defaultTerms,
     status: "draft",
-  });
+  }));
+
+  // Load existing invoice when an id is provided (e.g. reopened from History)
+  useEffect(() => {
+    if (!id) return;
+    getInvoice(id).then((loaded) => {
+      if (loaded) setInv(loaded);
+    });
+  }, [id]);
 
   const set = (p: Partial<Invoice>) => setInv((s) => ({ ...s, ...p }));
   const setItem = (id: string, p: Partial<LineItem>) =>

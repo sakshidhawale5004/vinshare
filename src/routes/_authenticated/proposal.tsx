@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Nav } from "@/components/nav";
 import { useBrand } from "@/lib/brand";
@@ -7,10 +7,12 @@ import { computeTotals, fmt, uid, type LineItem, type Proposal, type ProposalSec
 import { downloadProposalPDF } from "@/lib/pdf";
 import { Input, Textarea } from "./invoice";
 import { DocActions } from "@/components/doc-actions";
+import { getProposal } from "@/lib/doc-store";
 import { useVinBind } from "@/lib/vin-context";
 import { Plus, Trash2, Download, FileText, GripVertical, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/proposal")({
+  validateSearch: (s: Record<string, unknown>) => ({ id: typeof s.id === "string" ? s.id : undefined }),
   component: ProposalPage,
 });
 
@@ -26,7 +28,8 @@ function newItem(): LineItem {
 
 function ProposalPage() {
   const { brand } = useBrand();
-  const [pr, setPr] = useState<Proposal>({
+  const { id } = Route.useSearch();
+  const [pr, setPr] = useState<Proposal>(() => ({
     id: uid(),
     number: `${brand.proposalPrefix}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`,
     title: "Brand & Product Design Engagement",
@@ -47,7 +50,15 @@ function ProposalPage() {
     ],
     terms: brand.defaultTerms,
     notes: brand.defaultNotes,
-  });
+  }));
+
+  // Load existing proposal when an id is provided (e.g. reopened from History)
+  useEffect(() => {
+    if (!id) return;
+    getProposal(id).then((loaded) => {
+      if (loaded) setPr(loaded);
+    });
+  }, [id]);
 
   const set = (p: Partial<Proposal>) => setPr((s) => ({ ...s, ...p }));
   const setSection = (id: string, p: Partial<ProposalSection>) =>
