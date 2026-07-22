@@ -5,3 +5,42 @@ channel = "stable-25_05"
 
 [agent]
 expertMode = true
+
+[userenv]
+
+[userenv.shared]
+VITE_SUPABASE_PROJECT_ID = "rkdneoxdzdhbupwkiaqs"
+VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZG5lb3hkemRoYnVwd2tpYXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwODE3NjAsImV4cCI6MjA5OTY1Nzc2MH0.lA9KGkdKkVgrNs8elPs740Q9BGiEaQX0Y2sm0Ga7N0k"
+VITE_SUPABASE_URL = "https://rkdneoxdzdhbupwkiaqs.supabase.co"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3001
