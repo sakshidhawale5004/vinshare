@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Nav } from "@/components/nav";
 import { useBrand } from "@/lib/brand";
 import { listInvoices, listProposals, saveInvoice, saveProposal, deleteInvoice, deleteProposal, rowToInvoice, rowToProposal } from "@/lib/doc-store";
-import { fmt, uid } from "@/lib/doc-types";
+import { fmt, uid, PROPOSAL_STATUS_META, INVOICE_STATUS_META, type ProposalStatus, type InvoiceStatus } from "@/lib/doc-types";
 import { useMemo, useState } from "react";
 import { Search, FileText, FilePlus, Copy, Trash2, Eye } from "lucide-react";
 
@@ -107,7 +107,22 @@ function HistoryPage() {
                 </div>
                 <div>
                   <div className="font-semibold text-sm">{r.number}</div>
-                  <div className="text-xs text-muted-foreground capitalize">{r.kind} · {r.status || "—"}</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-muted-foreground capitalize">{r.kind}</span>
+                    {r.status && (() => {
+                      const meta = r.kind === "invoice"
+                        ? INVOICE_STATUS_META[r.status as InvoiceStatus]
+                        : PROPOSAL_STATUS_META[r.status as ProposalStatus];
+                      return meta ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                          style={{ color: meta.color, background: meta.bg }}>
+                          {meta.label}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{r.status}</span>
+                      );
+                    })()}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm truncate">{r.client_name || "—"}</div>

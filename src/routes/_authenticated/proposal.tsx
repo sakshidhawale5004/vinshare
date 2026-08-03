@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Nav } from "@/components/nav";
@@ -7,7 +7,8 @@ import { computeTotals, fmt, uid, type LineItem, type Proposal, type ProposalSec
 import { downloadProposalPDF } from "@/lib/pdf";
 import { Input, Textarea } from "./invoice";
 import { DocActions } from "@/components/doc-actions";
-import { getProposal } from "@/lib/doc-store";
+import { getProposal, saveInvoice } from "@/lib/doc-store";
+import { ProposalWorkPanel, DetailingForm } from "@/components/work-panel";
 import { useVinBind } from "@/lib/vin-context";
 import { Plus, Trash2, Download, FileText, GripVertical, Mail } from "lucide-react";
 
@@ -29,6 +30,7 @@ function newItem(): LineItem {
 function ProposalPage() {
   const { brand } = useBrand();
   const { id } = Route.useSearch();
+  const navigate = useNavigate();
   const [pr, setPr] = useState<Proposal>(() => ({
     id: uid(),
     number: `${brand.proposalPrefix}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`,
@@ -50,6 +52,10 @@ function ProposalPage() {
     ],
     terms: brand.defaultTerms,
     notes: brand.defaultNotes,
+    status: "draft" as const,
+    sentAt: "",
+    lastReminderAt: "",
+    reminderCount: 0,
   }));
 
   // Load existing proposal when an id is provided (e.g. reopened from History)
@@ -211,8 +217,34 @@ function ProposalPage() {
             </Card>
           </div>
 
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+          {/* Right column: work panel + detailing + preview */}
+          <div className="lg:sticky lg:top-24 lg:self-start space-y-4">
+            <ProposalWorkPanel proposal={pr} onChange={setPr} />
+            {pr.status === "approved" && (
+              <DetailingForm
+                proposal={pr}
+                onChange={setPr}
+                onAuthorizeInvoice={async () => {
+                  const inv = {
+                    id: uid(),
+                    number: `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`,
+                    issueDate: new Date().toISOString().slice(0, 10),
+                    dueDate: new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10),
+                    clientName: pr.clientName,
+                    clientEmail: pr.clientEmail,
+                    clientAddress: pr.clientAddress,
+                    items: pr.items,
+                    notes: pr.notes,
+                    terms: pr.terms,
+                    status: "draft" as const,
+                    proposalId: pr.id,
+                  };
+                  const saved = await saveInvoice(inv);
+                  navigate({ to: "/invoice", search: { id: saved.id } });
+                }}
+              />
+            )}
+            <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
               <FileText className="size-3.5" /> Live Preview
             </div>
             <ProposalPreview pr={pr} totals={totals} />

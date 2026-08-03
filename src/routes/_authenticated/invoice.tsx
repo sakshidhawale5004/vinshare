@@ -7,6 +7,7 @@ import { computeTotals, fmt, uid, type Invoice, type LineItem } from "@/lib/doc-
 import { downloadInvoicePDF } from "@/lib/pdf";
 import { DocActions } from "@/components/doc-actions";
 import { getInvoice } from "@/lib/doc-store";
+import { InvoiceWorkPanel } from "@/components/work-panel";
 import { useVinBind } from "@/lib/vin-context";
 import { Plus, Trash2, Download, FileText, Mail } from "lucide-react";
 
@@ -131,10 +132,7 @@ function InvoicePage() {
                 <Field label="Issue Date"><Input type="date" value={inv.issueDate} onChange={(v) => set({ issueDate: v })} /></Field>
                 <Field label="Due Date"><Input type="date" value={inv.dueDate} onChange={(v) => set({ dueDate: v })} /></Field>
                 <Field label="Status">
-                  <select value={inv.status} onChange={(e) => set({ status: e.target.value as Invoice["status"] })}
-                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm">
-                    <option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option>
-                  </select>
+                  <div className="px-3 py-2 text-sm text-muted-foreground bg-muted/40 rounded-lg border border-border capitalize">{inv.status}</div>
                 </Field>
               </div>
             </Card>
@@ -180,9 +178,10 @@ function InvoicePage() {
             </Card>
           </div>
 
-          {/* Preview */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+          {/* Right column: work panel + preview */}
+          <div className="lg:sticky lg:top-24 lg:self-start space-y-4">
+            <InvoiceWorkPanel invoice={inv} onChange={setInv} />
+            <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
               <FileText className="size-3.5" /> Live Preview
             </div>
             <InvoicePreview inv={inv} totals={totals} />
