@@ -31,8 +31,8 @@ export function Reveal({ children, delay = 0, className = "" }: { children: Reac
       ref={ref}
       className={className}
       style={{
-        opacity: shown ? 1 : 0,
-        transform: shown ? "translateY(0) scale(1)" : "translateY(32px) scale(0.98)",
+        opacity: 1,
+        transform: "none",
         transition: "opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1)",
       }}
     >
