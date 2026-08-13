@@ -337,57 +337,7 @@ function Workflow() {
   );
 }
 
-function Pricing() {
-  const { brand } = useBrand();
-  const plans = [
-    { name: "Starter", price: "Free", desc: "For solo operators", features: ["5 invoices / month", "3 proposals / month", "Branded PDF export", "Local template save"] },
-    { name: "Studio", price: "₹899", desc: "For growing teams", features: ["Unlimited invoices & proposals", "Custom logo & colors", "Multiple templates", "GST + HSN + TDS", "Priority support"], featured: true },
-    { name: "Agency", price: "₹2,499", desc: "For agencies at scale", features: ["Everything in Studio", "Team seats (5)", "Client portal", "API access", "Dedicated manager"] },
-  ];
-  return (
-    <section id="pricing" className="py-24 md:py-32">
-      <div className="max-w-7xl mx-auto px-6">
-        <Reveal className="text-center max-w-3xl mx-auto mb-16">
-          <div className="text-xs font-mono uppercase tracking-widest mb-4" style={{ color: brand.primary }}>/// Pricing</div>
-          <h2 className="text-4xl md:text-6xl font-black tracking-tighter">
-            Pricing that <span className="italic font-light">scales with you.</span>
-          </h2>
-        </Reveal>
-        <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-          {plans.map((p, i) => (
-            <Reveal key={p.name} delay={i * 80}>
-              <div
-                className={`p-8 rounded-3xl border h-full flex flex-col ${p.featured ? "text-white shadow-2xl border-transparent" : "bg-card border-border"}`}
-                style={p.featured ? { background: `linear-gradient(160deg, ${brand.primary}, ${brand.accent})`, boxShadow: `0 30px 60px -20px ${brand.primary}80` } : {}}
-              >
-                <div className={`text-sm font-semibold mb-1 ${p.featured ? "opacity-80" : "text-muted-foreground"}`}>{p.name}</div>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-5xl font-black tracking-tighter">{p.price}</span>
-                  {p.price !== "Free" && <span className={p.featured ? "opacity-70" : "text-muted-foreground"}>/mo</span>}
-                </div>
-                <div className={`text-sm mb-6 ${p.featured ? "opacity-80" : "text-muted-foreground"}`}>{p.desc}</div>
-                <ul className="space-y-3 mb-8 flex-1">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className={`size-4 mt-0.5 shrink-0 ${p.featured ? "opacity-90" : ""}`} style={!p.featured ? { color: brand.primary } : {}} />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to="/invoice"
-                  className={`text-center py-3 rounded-xl font-semibold transition-transform hover:scale-[1.02] ${p.featured ? "bg-white text-slate-900" : "bg-foreground text-background"}`}
-                >
-                  Get Started
-                </Link>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+
 
 function CTA() {
   const { brand } = useBrand();
