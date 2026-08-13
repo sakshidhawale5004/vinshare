@@ -452,7 +452,6 @@ function Index() {
       <Features />
       <LivePreview />
       <Workflow />
-      <Pricing />
       <CTA />
       <Footer />
     </div>
