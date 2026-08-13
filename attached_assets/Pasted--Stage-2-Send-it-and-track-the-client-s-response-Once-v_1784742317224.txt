@@ -1,0 +1,34 @@
+## Stage 2 — Send it and track the client's response
+
+Once verified, the panel exposes a single "Send proposal" action that fires both channels — email and WhatsApp — at once, logging both as delivery attempts. The client then sits in a "reviewing" state, and this is where the 24-hour cadence kicks in: an automated job checks pending proposals and re-sends a reminder every 24 hours until the client acts.
+
+One important technical note for later: WhatsApp's Business Platform only allows free-form messages within a 24-hour window after the customer last messaged you. A proactive reminder your system sends on its own initiative counts as business-initiated, so it has to use a pre-approved WhatsApp message template, not arbitrary text. Worth flagging early since template approval takes a few days through Meta.## Stage 3 — Manual detailing, then invoice authorization
+
+Approval doesn't jump straight to invoicing. It first drops into a manual "detailing" step — your ops team fills in scope, schedule, resource specifics, whatever needs a human. Only once that's done does the work panel expose the "Authorize invoice" action (typically gated to a finance role), which unlocks invoice generation from a template — same mechanism as the proposal template, just a different merge-field set.## Stage 4 — Invoice review and dispatch
+
+The invoice goes through the exact same review/rectify pattern as the proposal did — this symmetry is deliberate, it means your "review and approve" component and your "send via email + WhatsApp" component can literally be the same reusable pieces of code, just pointed at a different document type.## Core data model
+
+- **Client** — name, contact, email, WhatsApp number (with opt-in consent flag), address
+- **Template** — type (proposal/invoice), version, merge-field schema, active/archived status
+- **Proposal** — client_id, template_id, data payload, status (`draft → in_review → verified → sent → viewed → approved → rejected/stalled`), created_by, verified_by, sent_at, last_reminder_at, reminder_count
+- **Detailing** — proposal_id, scope/schedule/resource fields, filled_by, filled_at
+- **Invoice** — proposal_id, template_id, data payload, status (`draft → in_review → approved → sent → paid`), authorized_by, invoice_number (sequential — check your local tax/compliance rules on this)
+- **MessageLog** — entity_type, entity_id, channel (email/WhatsApp), direction, status (queued/sent/delivered/failed), provider_message_id
+- **AuditTrail** — every status transition, who did it, when
+
+## Suggested stack pieces
+
+- **Scheduling**: a background job queue (e.g. cron + a queue like BullMQ/Sidekiq/Celery) polling for proposals still in `sent`/`viewed` status and due for a reminder — not a naive `setTimeout`, since that won't survive a server restart
+- **Templating/PDF**: HTML template + headless rendering (e.g. Handlebars/Jinja + a PDF engine) so proposal and invoice generation share the same pipeline
+- **Email**: a transactional provider (SendGrid/SES/Postmark) with delivery + open tracking webhooks feeding back into `MessageLog`
+- **WhatsApp**: Meta's WhatsApp Business Cloud API (or Twilio/Gupshup as a wrapper) — remember the 24-hour session rule for reminders
+- **Storage**: generated PDFs to object storage (S3-compatible), with a signed URL
+
+## A few things worth deciding early
+
+- **Reminder cap** — do reminders run forever, or stop/escalate to a human after N attempts (e.g. 3 reminders, then flag for manual follow-up)?
+- **Timezone** — "every 24 hours" from what anchor? Sending at 2am local time to a client reads worse than sending in their business hours.
+- **Idempotency** — the reminder job and the send actions need to be safe against double-firing (job overlap, retries).
+- **Roles** — who can verify a proposal vs. authorize an invoice vs. detail one — these are probably three different permission levels.
+
+Want me to go deeper on any single piece next — the actual database schema, the API endpoints, or a UI mockup of the work panel?
