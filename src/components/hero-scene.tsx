@@ -103,16 +103,19 @@ function Scene({ primary, accent }: { primary: string; accent: string }) {
 export function HeroScene({ primary, accent }: { primary: string; accent: string }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const fallback = (
+    <div className="w-full h-full grid place-items-center">
+      <div className="size-40 rounded-full bg-slate-100" style={{ background: `radial-gradient(circle, ${primary}22, transparent)` }} />
+    </div>
+  );
   if (!mounted) {
-    return (
-      <div className="w-full h-full grid place-items-center">
-        <div className="size-40 rounded-full animate-pulse" style={{ background: `radial-gradient(circle, ${primary}66, transparent)` }} />
-      </div>
-    );
+    return fallback;
   }
   return (
-    <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: true, alpha: true }}>
-      <Scene primary={primary} accent={accent} />
-    </Canvas>
+    <ErrorBoundary fallback={fallback}>
+      <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: true, alpha: true }}>
+        <Scene primary={primary} accent={accent} />
+      </Canvas>
+    </ErrorBoundary>
   );
 }
