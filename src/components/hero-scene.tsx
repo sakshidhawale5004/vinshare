@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
+import { ErrorBoundary } from "./error-boundary";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Float, MeshDistortMaterial, Environment, RoundedBox, Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -84,7 +85,7 @@ function Scene({ primary, accent }: { primary: string; accent: string }) {
       <directionalLight position={[5, 5, 5]} intensity={1.4} castShadow />
       <directionalLight position={[-5, 3, -3]} intensity={0.5} color={primary} />
       <pointLight position={[0, -4, 3]} intensity={0.6} color={accent} />
-      <Environment preset="city" />
+      <Environment files="/potsdamer_platz_1k.hdr" />
       <Float speed={1.6} rotationIntensity={0.6} floatIntensity={1.2}>
         <Document position={[-1.6, 0, -0.5]} rotation={[0.1, 0.4, -0.1]} color={primary} label="₹ 12,450" />
       </Float>
@@ -113,9 +114,13 @@ export function HeroScene({ primary, accent }: { primary: string; accent: string
   }
   return (
     <ErrorBoundary fallback={fallback}>
-      <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: true, alpha: true }}>
-        <Scene primary={primary} accent={accent} />
-      </Canvas>
+      <React.Suspense fallback={null}>
+        <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: true, alpha: true }}>
+          <React.Suspense fallback={null}>
+            <Scene primary={primary} accent={accent} />
+          </React.Suspense>
+        </Canvas>
+      </React.Suspense>
     </ErrorBoundary>
   );
 }

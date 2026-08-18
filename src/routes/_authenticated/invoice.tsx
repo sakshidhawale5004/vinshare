@@ -8,11 +8,11 @@ import { downloadInvoicePDF } from "@/lib/pdf";
 import { DocActions } from "@/components/doc-actions";
 import { getInvoice } from "@/lib/doc-store";
 import { InvoiceWorkPanel } from "@/components/work-panel";
-import { useVinBind } from "@/lib/vin-context";
+
 import { Plus, Trash2, Download, FileText, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/invoice")({
-  validateSearch: (s: Record<string, unknown>) => ({ id: typeof s.id === "string" ? s.id : undefined }),
+  validateSearch: (s: Record<string, unknown>): { id?: string } => ({ id: typeof s.id === "string" ? s.id : undefined }),
   component: InvoicePage,
 });
 
@@ -61,44 +61,7 @@ function InvoicePage() {
 
   const restore = (snap: Invoice) => setInv({ ...snap, id: inv.id });
 
-  // Vin context binding — lets the chatbot see this invoice and insert into fields.
-  const binding = useMemo(() => ({
-    sessionKey: `invoice:${inv.id}`,
-    sessionLabel: `Invoice ${inv.number}`,
-    contextText: [
-      `Document type: Invoice`,
-      `Number: ${inv.number}`,
-      `Status: ${inv.status}`,
-      `Issue date: ${inv.issueDate}   Due date: ${inv.dueDate}`,
-      `Company (from): ${brand.companyName} — ${brand.tagline}`,
-      brand.gstin ? `Company GSTIN: ${brand.gstin}` : "",
-      `Client: ${inv.clientName}${inv.clientEmail ? ` <${inv.clientEmail}>` : ""}`,
-      inv.clientAddress ? `Client address: ${inv.clientAddress}` : "",
-      `Currency: ${brand.currency}`,
-      "Line items:",
-      ...inv.items.map((it, i) => `  ${i + 1}. ${it.description || "(unnamed)"} — qty ${it.qty} @ ${brand.currency}${it.rate} (disc ${it.discountPct}%, tax ${it.taxPct}%)`),
-      `Subtotal: ${fmt(totals.subtotal, brand.currency)}`,
-      `Discount: ${fmt(totals.discount, brand.currency)}`,
-      `Tax: ${fmt(totals.tax, brand.currency)}`,
-      `Total due: ${fmt(totals.total, brand.currency)}`,
-      inv.notes ? `Existing notes: ${inv.notes}` : "",
-      inv.terms ? `Existing terms: ${inv.terms}` : "",
-    ].filter(Boolean).join("\n"),
-    targets: [
-      { id: "notes", label: "Notes", apply: (t: string) => set({ notes: t }) },
-      { id: "terms", label: "Terms", apply: (t: string) => set({ terms: t }) },
-      { id: "clientAddress", label: "Client address", apply: (t: string) => set({ clientAddress: t }) },
-      {
-        id: "appendNotes",
-        label: "Append to notes",
-        apply: (t: string) => set({ notes: inv.notes ? `${inv.notes}\n\n${t}` : t }),
-      },
-    ],
-    docType: "invoice" as const,
-    docId: inv.id,
-    getSnapshot: () => inv,
-  }), [inv, brand, totals]);
-  useVinBind(binding);
+  // Context binding removed
 
   return (
     <div className="min-h-screen bg-muted/30">

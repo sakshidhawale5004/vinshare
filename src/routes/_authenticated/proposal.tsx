@@ -9,11 +9,11 @@ import { Input, Textarea } from "./invoice";
 import { DocActions } from "@/components/doc-actions";
 import { getProposal, saveInvoice } from "@/lib/doc-store";
 import { ProposalWorkPanel, DetailingForm } from "@/components/work-panel";
-import { useVinBind } from "@/lib/vin-context";
+
 import { Plus, Trash2, Download, FileText, GripVertical, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/proposal")({
-  validateSearch: (s: Record<string, unknown>) => ({ id: typeof s.id === "string" ? s.id : undefined }),
+  validateSearch: (s: Record<string, unknown>): { id?: string } => ({ id: typeof s.id === "string" ? s.id : undefined }),
   component: ProposalPage,
 });
 
@@ -80,46 +80,7 @@ function ProposalPage() {
 
   const restore = (snap: Proposal) => setPr({ ...snap, id: pr.id });
 
-  // Vin context binding — surfaces this proposal to the chatbot and lets it insert drafts.
-  const binding = useMemo(() => ({
-    sessionKey: `proposal:${pr.id}`,
-    sessionLabel: `Proposal ${pr.number}`,
-    contextText: [
-      `Document type: Proposal`,
-      `Number: ${pr.number}   Title: ${pr.title}`,
-      `Issue date: ${pr.issueDate}   Valid until: ${pr.validUntil}`,
-      `Prepared by: ${brand.companyName} — ${brand.tagline}`,
-      `Client: ${pr.clientName}${pr.clientEmail ? ` <${pr.clientEmail}>` : ""}`,
-      pr.clientAddress ? `Client address: ${pr.clientAddress}` : "",
-      `Currency: ${brand.currency}`,
-      "Sections:",
-      ...pr.sections.map((s, i) => `  ${i + 1}. ${s.heading}\n     ${s.body.replace(/\n/g, "\n     ")}`),
-      "Investment / line items:",
-      ...pr.items.map((it, i) => `  ${i + 1}. ${it.description || "(unnamed)"} — qty ${it.qty} @ ${brand.currency}${it.rate} (disc ${it.discountPct}%, tax ${it.taxPct}%)`),
-      `Subtotal: ${fmt(totals.subtotal, brand.currency)}   Total: ${fmt(totals.total, brand.currency)}`,
-      pr.notes ? `Existing notes: ${pr.notes}` : "",
-      pr.terms ? `Existing terms: ${pr.terms}` : "",
-    ].filter(Boolean).join("\n"),
-    targets: [
-      { id: "title", label: "Title", apply: (t: string) => set({ title: t.split("\n")[0].slice(0, 120) }) },
-      { id: "notes", label: "Notes", apply: (t: string) => set({ notes: t }) },
-      { id: "terms", label: "Terms", apply: (t: string) => set({ terms: t }) },
-      {
-        id: "newSection",
-        label: "Add as new section",
-        apply: (t: string) => {
-          const lines = t.split("\n");
-          const heading = (lines[0] || "New Section").replace(/^#+\s*/, "").slice(0, 80);
-          const body = lines.slice(1).join("\n").trim() || t;
-          setPr((s) => ({ ...s, sections: [...s.sections, { id: uid(), heading, body }] }));
-        },
-      },
-    ],
-    docType: "proposal" as const,
-    docId: pr.id,
-    getSnapshot: () => pr,
-  }), [pr, brand, totals]);
-  useVinBind(binding);
+  // Context binding removed
 
   return (
     <div className="min-h-screen bg-muted/30">

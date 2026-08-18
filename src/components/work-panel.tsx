@@ -33,7 +33,7 @@ function StatusBadge({ status, meta }: { status: string; meta: Record<string, { 
 function ActionBtn({
   icon: Icon, label, onClick, variant = "default", disabled,
 }: {
-  icon: React.ElementType; label: string; onClick: () => void;
+  icon: React.FC<{ className?: string }>; label: string; onClick: () => void;
   variant?: "default" | "success" | "danger" | "warning"; disabled?: boolean;
 }) {
   const colors = {
